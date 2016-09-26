@@ -2,7 +2,7 @@
 title: Proj4Spes
 tagline: 'A Jekyll Web site - theme based on Lanyon -'
 description: 'A Jekyll theme adapted from <a href="http://lanyon.getpoole.com/" target="_blank">Lanyon</a>. Made by <a href="http://github.com/proj4spes" target="_blank">@Proj4Spes</a>.'
-baseurl: "/"
+baseurl: "/proj4spes.github.io"
 url: http://github.com/proj4spes
 logo: '/public/logo.png'
 
