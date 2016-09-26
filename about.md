@@ -5,7 +5,7 @@ title: About
 
 <p class="message">
 Hi, Con questa pagina mi presento e descrivo brevemente le attività che hanno portato alla realizzazione di questo sito. 
-Sono un consulente in Tecnologie innovative, che parte da un passato puramente tecnico (progettazione software in ambito Telecomunicazioni/automazione industriale) fino ad arrivare ad avere esperienza ed attitudine commerciale . Aspetto comune a tutta la mia vita professionale è comunque stata la curiosità per le cose nuove. Questo è il motivo che mi spinge oggi ad publicare queste miei pensieri...
+Sono un consulente in Tecnologie innovative, che parte da un passato puramente tecnico (progettazione software in ambito Telecomunicazioni/automazione industriale) fino ad arrivare ad avere esperienza ed attitudine commerciale . Aspetto comune a tutta la mia vita professionale è comunque stata la curiosità per le cose nuove. Questo è il motivo che mi spinge oggi a pubblicare queste miei pensieri...
 </p>
 Il sito ( di tipo statico) è stato generato utilizzando il sistema [Jekyll](http://jekyllrb.com) chepermette di definire siti multipagnine con stili diversi. Ovviamente il layout "principe"  è quello   del Blog, il che lo rende particolarmente adatto anche alle realizzazione di siti personali o attinenti ad un progetto.
 
