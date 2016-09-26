@@ -1,0 +1,15 @@
+recaptcha per uso generale-----------
+
+Chiave pubblica: 01p_kP-iokpp_maI9XoI_C6A==
+
+Chiave privata: 67835a75296557de9d2d0b6be4acf318
+
+
+----mail mailhide---
+-----stringa  per web statico  :jekill
+
+http://www.google.com/recaptcha/mailhide/d?k=01Sq4O-dU1m3d82V_AMe90pg==&c=cIp0O4LvJ2TPJSfjXdY1TROPwjCA6vwmd5MRCGipNYc=
+
+
+-----------stringa html per onclick sito  web dinamico
+<a href="http://www.google.com/recaptcha/mailhide/d?k=01Sq4O-dU1m3d82V_AMe90pg==&amp;c=cIp0O4LvJ2TPJSfjXdY1TROPwjCA6vwmd5MRCGipNYc=" onclick="window.open('http://www.google.com/recaptcha/mailhide/d?k\x3d01Sq4O-dU1m3d82V_AMe90pg\x3d\x3d\x26c\x3dcIp0O4LvJ2TPJSfjXdY1TROPwjCA6vwmd5MRCGipNYc\x3d', '', 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=500,height=300'); return false;" title="Reveal this e-mail address">e...</a>@gmail.com

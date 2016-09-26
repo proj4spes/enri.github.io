@@ -1,0 +1,62 @@
+# Site Info
+title: Proj4Spes
+tagline: 'A Jekyll Web site - theme based on Lanyon -'
+description: 'A Jekyll theme adapted from <a href="http://lanyon.getpoole.com/" target="_blank">Lanyon</a>. Made by <a href="http://github.com/proj4spes" target="_blank">@Proj4Spes</a>.'
+baseurl: "/"
+url: http://github.com/proj4spes
+logo: '/public/logo.png'
+
+# Site configurations
+gems:
+  - jekyll-paginate
+markdown: kramdown
+kramdown:
+  input: GFM
+excerpt_separator: "<!-- more -->"
+sass:
+  style: compressed
+  sass_dir: _scss    
+paginate: 5
+paginate_path: '/blog/page:num'
+permalink: pretty
+
+version: 1.0.0
+
+# About/contact
+author:
+  name: Proj4Spes
+  description: >
+      A passionate <strong>Software Architect and DevOps</strong>, learning Cloud/AWS/DevOps/Ansible/Nomad/Terraform
+#  gravatar: 3c2986ad7ac1f2230ea3596f44563328 # md5 hash of your email address
+  contact:
+    linkedin:  https://www.linkedin.com/in/enrico-proietti-4a67392a?trk=hp-identity-name
+    github:    http://github.com/proj4spes
+    email:     http://www.google.com/recaptcha/mailhide/d?k=01Sq4O-dU1m3d82V_AMe90pg==&c=cIp0O4LvJ2TPJSfjXdY1TROPwjCA6vwmd5MRCGipNYc= 
+
+# Navigation (2nd level links supported)
+nav:
+  Home:           
+    - '/'
+  Blog:           
+    - '/blog/'
+    - { Categories: '/blog/categories/' }
+    - { Tags: '/blog/tags/' }
+  About:          
+    - '/about/'
+  Github Project: 
+    - 'http://github.com/proj4spes'
+
+# Where are tags and categories displayed
+tag_page: '/blog/tags/'
+category_page: '/blog/categories/'
+
+hero:
+  image: /public/img/where-to-go.png
+  caption: Original Artwork by Me 
+  Intro: A Blog Site to Explain to myself Cloud Concept
+
+# Puglins
+mathjax: true # whether support mathjax
+google_analytics_token: 'UA-00000000-1' # leave blank if you don't want google analytics
+disqus_short_name: 'your_short_name' # leave blank if you don't want disqus
+
