@@ -1,6 +1,8 @@
 # Codinfox-Lanyon
 
-This is a jekyll template based on [Lanyon](https://github.com/poole/lanyon). See a live demo [here](http://codinfox.github.io).
+enr enr
+This is a jekyll template based on [Lanyon](https://github.com/poole/lanyon).
+# See a live demo [here](http://codinfox.github.io).
 
 **If you like this project, PLEASE give it a star.**
 
@@ -18,6 +20,6 @@ The theme supports:
 
 ## License
 
-Open sourced under the [MIT license](LICENSE.md).
+#Open sourced under the [MIT license](LICENSE.md).
 
 <3
