@@ -1,8 +1,7 @@
-# Codinfox-Lanyon
+# Proj4Spes-Lanyon
 
-enr enr
 This is a jekyll template based on [Lanyon](https://github.com/poole/lanyon).
-# See a live demo [here](http://codinfox.github.io).
+# See a live demo [here](http://proj4spes.github.io).
 
 **If you like this project, PLEASE give it a star.**
 
