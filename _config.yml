@@ -43,6 +43,8 @@ nav:
     - { Tags: '/blog/tags/' }
   About:          
     - '/about/'
+  Download:
+    - '/Download/'
   Github Project: 
     - 'http://github.com/proj4spes'
 
