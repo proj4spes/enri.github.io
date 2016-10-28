@@ -7,7 +7,7 @@ url: https://proj4spes.github.io/proj4spes.github.io/
 logo: '/public/logo.png'
 
 # Site configurations
-gems: [jekyll-paginate, jekyll-seo-tag]
+gems: [jekyll-paginate, jekyll-seo-tag, jekyll-sitemap]
 markdown: kramdown
 kramdown:
   input: GFM
