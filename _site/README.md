@@ -1,6 +1,7 @@
-# Codinfox-Lanyon
+# Proj4Spes-Lanyon
 
-This is a jekyll template based on [Lanyon](https://github.com/poole/lanyon). See a live demo [here](http://codinfox.github.io).
+This is a jekyll template based on [Lanyon](https://github.com/poole/lanyon).
+# See a live demo [here](http://proj4spes.github.io).
 
 **If you like this project, PLEASE give it a star.**
 
@@ -18,6 +19,6 @@ The theme supports:
 
 ## License
 
-Open sourced under the [MIT license](LICENSE.md).
+#Open sourced under the [MIT license](LICENSE.md).
 
 <3

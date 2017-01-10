@@ -1,0 +1,143 @@
+---
+layout: post
+title: Containers and its Orchestration
+---
+
+
+<div class="message">
+  Hy! In questo posto voglio  classificare diversi software che gestiscono/creano/usufruiscono di una tecnologia che è diventatata Hot nel corso degli ultumi 2/3 anni.
+</div>
+"<!-- more -->"
+#Cosa Sono i Container
+La prima  cosa da chiarirsi è che cosa sono i Container,  perchè sono un argomento di fortissimo interesse nel mondo IT odierno , quali sono i loro punti di forza e quali le loro  debolezze.
+
+>I container sono degli "ambienti" che tramite l'utilizzo di alcuni  servizi runtime del sistema operativo Linux/Unix permettono alle applicazioni, configurate al loro interno di godere di un certo grado di **isolamento**,  semplificando così la fase della loro messa in opera (deployment). Questa semplificazione, unitamente all'introduzione di architetture a **microservizi** delle applicazioni stesse porta ad una accelerazione del ciclo di rilascio del servizio in produzione,con evidente vantaggio in termini di flessibilità e reattività del prodotto/servizio rispetto al mercato.
+
+Volendo essere più chiari, il kernel linux/unix mette a disposizione dei file system , degli alberi dei processi , della memoria , dei device che "appaiono" all'applicazione essere quelli del sistema operativo  Host e gli permete di utilizzarli in modo esclusivo  ma in realta le risorse sono condivise e gestite con le stesse strutture dati dallo stesso kernel.
+
+Quella precedente è la definizione diciamo dei puristi , in effetti un altro motivo di rilevanza dei container, soprattutto in una loro implementazione ovvero Docker, è la speranza che essi vadano ad occupare fette di mercato  (almeno una parte) delle Virtual Machine tradizionali , ovviando ad alcuni "problemi" quali uso inefficiente delle risorse disco/memoria e lentezza nella fase di boot, producendo in ultima analisi una riduzione dei costi.
+
+Dalla contrapposizione dei container alle Virtual Machine, emorgono  i punti di debolezza dei primi rispetto alle seconde : il livello di isolamento dal mondo esterno e quindi il livello di sicurezza introdotto (soprattutto nei confronti del mondo esterno). Infatti mentre le VM all'interno del singolo host condividevano solamente la CPU e alcuni driver in caso  di para-virtualizzazione, i container condividono l'intero sistema operativo, shared library e driver.
+
+In effetti bisogna dire che le maggior debolezza dei container in termini di sicurezza si presenta nei sistemi Linux in quanto altri sistemi operativi più vicini al mondo mainframe già prevedevono forme di container native (system Z Ibm) o aggiunte  (Solais Zone) i cui in effetti esisteva una segmentazione (duplicazione) delle risorse all'interno del Kernel. 
+
+Quindi gli sforzi per mantenere n livello di sicure a livello Enterprise si muve verso 3 direttrici diverse : 
+
+- eseguire i container su sistemi operativi diversi da linux (joyent clud provider operante su SmartOS riprendente concetti di Zone Solaris)
+
+- eseguire i workload  su  hypervisor light specializzati per container (LXD di Canonical) in questo caso i container eseguono un proprio sistema operativo al di sotto delle applicazioni (system container)
+
+- aumentare la sicurezza intrinseca all'interno dei container applicando i metodi quali Apparmor/SELinux o configurando oppurtunamente le capabilities dei processi all'interno dei container
+
+Ma perchè pur essendo le tecnologie che permettola realizzazione dei container presenti da decadi, solamente ora si è osservato un grande interesse ? Perchè  finora tutte le implementazioni non prevedevano un controller ed un set di tool che facilita notevolmente (enormemente) la messa in opera di un comtainer. Basti pensare che il prodotto più diffuso (e forse anche il più simile a docker) presenta un set di Template da applicare/modificare a secondo dei tipi dei workload previsti. In effetti la grande innovazione di docker è la presenza del controller (processo docker spazio user dell'Host) che permette l'attivazione del container a partire da immagini (di tipo docker) precostituite e presenti su repository pubblici. 
+in effetti il valore di Docker è  soprattutto nei registry pubblici dove ormai sono  presenti migliaia di immagini di applicazioni diverse costruite in modo incrementale da Template (immagini certificate ..) tanto che altre soluzioni di container mantengono lo stesso formato.
+
+Vediamo ora come i container Docker vengono gestiti e che ecosistema di tool,management software , scheduler , ha generato anche indirettamente , ovvero dai competitors..  
+Etiam porta **sem malesuada magna** mollis euismod. Cras mattis consectetur purus sit amet fermentum. Aenean lacinia bibendum nulla sed consectetur.
+
+## Inline HTML elements
+
+HTML defines a long list of available inline tags, a complete list of which can be found on the [Mozilla Developer Network](https://developer.mozilla.org/en-US/docs/Web/HTML/Element).
+
+- **To bold text**, use `<strong>`.
+- *To italicize text*, use `<em>`.
+- Abbreviations, like <abbr title="HyperText Markup Langage">HTML</abbr> should use `<abbr>`, with an optional `title` attribute for the full phrase.
+- Citations, like <cite>&mdash; Mark otto</cite>, should use `<cite>`.
+- <del>Deleted</del> text should use `<del>` and <ins>inserted</ins> text should use `<ins>`.
+- Superscript <sup>text</sup> uses `<sup>` and subscript <sub>text</sub> uses `<sub>`.
+
+Most of these elements are styled by browsers with few modifications on our part.
+
+## Heading
+
+Vivamus sagittis lacus vel augue rutrum faucibus dolor auctor. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit. Morbi leo risus, porta ac consectetur ac, vestibulum at eros.
+
+### Code
+
+Cum sociis natoque penatibus et magnis dis `code element` montes, nascetur ridiculus mus.
+
+{% highlight js %}
+// Example can be run directly in your JavaScript console
+
+// Create a function that takes two arguments and returns the sum of those arguments
+var adder = new Function("a", "b", "return a + b");
+
+// Call the function
+adder(2, 6);
+// > 8
+{% endhighlight %}
+
+Aenean lacinia bibendum nulla sed consectetur. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa.
+
+### Lists
+
+Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Aenean lacinia bibendum nulla sed consectetur. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.
+
+* Praesent commodo cursus magna, vel scelerisque nisl consectetur et.
+* Donec id elit non mi porta gravida at eget metus.
+* Nulla vitae elit libero, a pharetra augue.
+
+Donec ullamcorper nulla non metus auctor fringilla. Nulla vitae elit libero, a pharetra augue.
+
+1. Vestibulum id ligula porta felis euismod semper.
+2. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+3. Maecenas sed diam eget risus varius blandit sit amet non magna.
+
+Cras mattis consectetur purus sit amet fermentum. Sed posuere consectetur est at lobortis.
+
+<dl>
+  <dt>HyperText Markup Language (HTML)</dt>
+  <dd>The language used to describe and define the content of a Web page</dd>
+
+  <dt>Cascading Style Sheets (CSS)</dt>
+  <dd>Used to describe the appearance of Web content</dd>
+
+  <dt>JavaScript (JS)</dt>
+  <dd>The programming language used to build advanced Web sites and applications</dd>
+</dl>
+
+Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Nullam quis risus eget urna mollis ornare vel eu leo.
+
+### Tables
+
+Aenean lacinia bibendum nulla sed consectetur. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Upvotes</th>
+      <th>Downvotes</th>
+    </tr>
+  </thead>
+  <tfoot>
+    <tr>
+      <td>Totals</td>
+      <td>21</td>
+      <td>23</td>
+    </tr>
+  </tfoot>
+  <tbody>
+    <tr>
+      <td>Alice</td>
+      <td>10</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <td>Bob</td>
+      <td>4</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <td>Charlie</td>
+      <td>7</td>
+      <td>9</td>
+    </tr>
+  </tbody>
+</table>
+
+Nullam id dolor id nibh ultricies vehicula ut id elit. Sed posuere consectetur est at lobortis. Nullam quis risus eget urna mollis ornare vel eu leo.
+
+-----
+
+Want to see something else added? <a href="https://github.com/poole/poole/issues/new">Open an issue.</a>

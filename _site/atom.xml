@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
- <title>Proj4Spes</title>
- <link href="http://github.com/proj4spes/home/enri/lanyon/atom.xml" rel="self"/>
- <link href="http://github.com/proj4spes/home/enri/lanyon/"/>
- <updated>2016-09-26T15:39:09+02:00</updated>
- <id>http://github.com/proj4spes</id>
+ <title>Nublando - a Blog about Cloud and Docker</title>
+ <link href="http://localhost:4000/proj4spes.github.io/atom.xml" rel="self"/>
+ <link href="http://localhost:4000/proj4spes.github.io/"/>
+ <updated>2016-11-04T01:16:40+01:00</updated>
+ <id>http://localhost:4000</id>
  <author>
    <name>Proj4Spes</name>
    <email></email>
@@ -13,12 +13,563 @@
 
  
  <entry>
-   <title>Introducing Lanyon</title>
-   <link href="http://github.com/proj4spes/2014/01/02/introducing-lanyon/"/>
-   <updated>2014-01-02T00:00:00+01:00</updated>
-   <id>http://github.com/proj4spes/home/enri/lanyon/2014/01/02/introducing-lanyon</id>
-   <content type="html">&lt;p&gt;Lanyon is an unassuming &lt;a href=&quot;http://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt; theme that places content first by tucking away navigation in a hidden drawer. It’s based on &lt;a href=&quot;http://getpoole.com&quot;&gt;Poole&lt;/a&gt;, the Jekyll butler.&lt;/p&gt;
+   <title>Come installare Kubernetes su AWS</title>
+   <link href="http://localhost:4000/cloud/2016/11/01/Kubernetes-on-AWS-with-Kubeadm/"/>
+   <updated>2016-11-01T00:00:00+01:00</updated>
+   <id>http://localhost:4000/proj4spes.github.io/cloud/2016/11/01/Kubernetes-on-AWS-with-Kubeadm</id>
+   <content type="html">&lt;div class=&quot;message&quot;&gt;
+  In questo Blog voglio esaminare  brevemente quali sono le attuale modalità di installazione per il sistema di orchestrazione di Kubernetes  e poi soffermarmi 
+su l'ultimo (cronologicamente) tool di installazione Kubeadm per sottolineare quale siano i suoi vantaggi ed gli attuali limiti.
+&lt;/div&gt;
+&lt;p&gt;”&lt;!-- more --&gt;”
+ Iniziamo con il dire che la parte di installazione di kubernetes ha una particolare imporanza per lo sviluppo (in termini di percentuali di mercato) per il prodotto in questione; questo per 2 motivi :&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;il competitor attuale principale ovvero Docker essenzialmente viene installato, indipendentemente dal fatto che l’Host sia fisico  o in virtuale in Coud)   in 2 soli modi : a mano  (tramite il package manager di riferimento del OS Host ) o tramite Docker-Machine. Questo è possibile in quanto il cluster di  Docker (swarm) è “auto-contenente” (un esempio ne è  il load balancing interno) mentre la componente Docker engine è  lo standard DeFacto per i container ed è molto facile sia da installare sia da integrare in altri prodotti (semistrutturati come DCOS/Mesos ad esempio).&lt;/li&gt;
+&lt;/ul&gt;
 
+&lt;p&gt;Questo in effetti  si traduce anche in  una strategia di sviluppo dei 2 prodotti  : ad applicazioni interagenti  (loosly coupled) per Docker od applicazione  a moduli strettamente connessi/integrati per kubernetes.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Kubernetes si presenta e si presenterà sempre più come piattaforma (di sviluppo/integrazione) di Container per altri sistemi di più ampio respiro (Openstack ad esempio) e per questo motivo (oltre a quelli sopracitati di strategia di sviluppo)  le modalità di installazioni/migrazioni della singola componente devono essere ben definite .&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Nonostante quanto detto attulamente kubernetes si installa in un quantità di maniere differenti a seconda della piattaforma ospitante (anche se in effetti si riducono essenzialmente a 2/3 modalità e  utilizzanti i soliti 2/3 tool di deployment..salt, ansible, chief oltre ai sistemi di template quali CloudFormation per i cloud Provider. Questo perchè effettivamente Kubernetes è un progetto più giovane rispetto a Docker , sia perchè la community è molto più vasta e meno controllata rispetto a quella di Docker sia perchè infine il livello di integrazione di kubernetes con i sistemi che lo “ospitano” è sicuramente superiore a quello di Docker ( e varia anche a secondo della piattaforma dove possiamo dire che ad oggi il livello di integrazione maggiore ovviamente si ha con Google Container Engine).&lt;/p&gt;
+
+&lt;p&gt;Infine bisogna dire che comunque questa fase di anarchia giovanile stà velocemente  decrescendo infatti volendo idendificare tre fasi per installare kubernetes :&lt;/p&gt;
+
+&lt;p&gt;1) Provisioning dei sistemi&lt;/p&gt;
+
+&lt;p&gt;2) deployment delle componenti del sistema&lt;/p&gt;
+
+&lt;p&gt;3) integrazione / riconoscimento / discovery/autenticazione delle componenti stesse&lt;/p&gt;
+
+&lt;p&gt;la prima fase ovviamante manterrà delle differenze (magari nascoste da tool multi-provider quali Terraform) mentre le altre 2 fasi saranno risolte in modo univoco utilizzando tools quali &lt;strong&gt;KubeAdm&lt;/strong&gt; o &lt;strong&gt;Kops&lt;/strong&gt; che sfruttano i Manifest (come i Configuration Files ma per le componenti si sistema), gli oggetti Deamonset(.yaml) e  l’engine dei pod (kubelet ) per “costruire” il sistema.
+In questo Blog porterò l’esempio di un’ installazione di un cluster kubernetes con il tool Kubeadm su Aws  illustrandone (secondo me ) i pregi ed i limiti.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Nella release 1.4 (settembre 2016) kubernetes introduce il comando Kubeadm, il quale riduce la fase di start del cluster a soli 2 comandi : kubeadm init (da eseguire sul nodo aster) e kubeadm join (da eseguire sui nodi worker) . Questi 2 comeandi corrispondono ale fasi 2) e 3) sopracitate, mentrec il provisioning dei nodi verrà effettuato con Terraform che creerà l’infrastruttura AWS-VPC, i nodi e lancerà (tramite “user data” Aws anche  i suddetti commandi .Tale semplificazione si è raggiunta anche tramite la creazione di package apt-get e yum per i principali componenti (kublet, kubeadm, kubectl, kubernetes-cni) e la creazione di Deamonset per molti add-ons ultimo tra i quali quello per la rete Weave nel nostro caso. 
+Altra feature introdotta in alpha in rel.1.4 ed adottata da Kubeadm è il TLS boostrap API, ovvero una lib per facilitare l’attivazioni di TLS  verso la componente “API server” (sul master) da parte dei kubelet (sui nodi). Questa API richiede una firma di tipo Token Cryptato (costruito esternamente e inietttato sia nel master che nei nodi) per attivare le procedure di instaurazione dei TLS (csr-certificate signing request). Vediamo di seguito come installare il cluster.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;come-installare&quot;&gt;Come installare&lt;/h2&gt;
+
+&lt;h3 id=&quot;prerequisiti&quot;&gt;Prerequisiti&lt;/h3&gt;
+
+&lt;p&gt;Bisogna avere installato Terraform , aws cli (ed avere un account AWS ) , python&lt;/p&gt;
+
+&lt;h3 id=&quot;macro-step--per-linstallazione&quot;&gt;Macro step  per l’installazione&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Generare il token :
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; python -c &lt;span class=&quot;s1&quot;&gt;'import random; print &quot;%0x.%0x&quot; % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+    &lt;p&gt;Il token verrà iniettato tramite Terraform nelle user_data delle istanze aws per il master ed i worker (nodi)&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Generare le keys ssh 
+&lt;code class=&quot;highlighter-rouge&quot;&gt;ssh-keygen -f k8s-kubeadm-test&lt;/code&gt; . le ssh-key verranno  installate su tutti i nodi&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Esegui Terraform plan :
+&lt;code class=&quot;highlighter-rouge&quot;&gt;Terraform plan -var k8s-ssh-key=&quot;$(cat k8s-kubeadm-test.pub)&quot; -var 'k8stoken=&amp;lt;token&amp;gt;'
+&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Esegui Terraform apply :
+&lt;code class=&quot;highlighter-rouge&quot;&gt;terraform apply  -var k8s-ssh-key=&quot;$(cat k8s-kubeadm-test.pub)&quot; -var 'k8stoken=&amp;lt;token&amp;gt;'&lt;/code&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Collegati con ssh al master (vedi output di terraform) :&lt;code class=&quot;highlighter-rouge&quot;&gt;ssh ubuntu@$(terraform output ip o DNS ) -i k8s-kubeadm-test&lt;/code&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;esegui sul master :
+ &lt;code class=&quot;highlighter-rouge&quot;&gt;$ kubectl get nodes&lt;/code&gt;
+per verificare che il cluster e tutti i worker siano attivi. La risposta dovrebbe essere simile alla seguente:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;nx&quot;&gt;NAME&lt;/span&gt;             &lt;span class=&quot;nx&quot;&gt;STATUS&lt;/span&gt;    &lt;span class=&quot;nx&quot;&gt;AGE&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;52&lt;/span&gt;   &lt;span class=&quot;nx&quot;&gt;Ready&lt;/span&gt;     &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;d&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;53&lt;/span&gt;   &lt;span class=&quot;nx&quot;&gt;Ready&lt;/span&gt;     &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;d&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;93&lt;/span&gt;   &lt;span class=&quot;nx&quot;&gt;Ready&lt;/span&gt;     &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;d&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Complimenti se il risultato è quello qui sopra  hai appena installato un cluster di 2 nodi  kubernetes ed un master su altrettante istanze (VM os ubuntu 16.04) AWS .&lt;/strong&gt; Le istanze sono state attivate su 2 AZ differenti della region Irland (eu-west-1) in 2 subnet differenti . Inoltre, essendo la VPC non di default è stato attivato un internet gateway e relative tabelle di routing per le 2 subnet. 
+&lt;strong&gt;Ma…c’è sempre un ma, specialmente per i software rilasciati in alpha infatti tra i limiti più importanti  di kubeadm vi è l’impossibilità di creare loadBalancer (di tipo elb AWS gestito da kubernetes) e di supportare i PersistentVolume (integrabile con ebs AWS) oltre a non supportare un cluster di master (e di etcd) e un CA temporanea.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Quindi se volessi creare un servizio che opera su più nodi dovrei dovrei definirmi un ingress usando sistemi quali nginx o  traefik oppure attivare l’ELB di Aws previo descrizione del servizio in qualche file di configurazione (da capire come fanno gli altri tools d’installazione!!) . Opto per una soluzione molto più semplice (anche se molto meno elegante) : creo un ASG (AutoScalingGroup) AWS , i worker li metto sotto l’ASG  e per ogni servizio kubernetes che creo (con TYPO= NodePort) aggiungo un listener ed  un healty check sulla porta (per il primo servizio creo ache l’elb) degli hosts che mi viene restituita dal “describe svc”.&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;Intanto notiamo subito un particolare : se cambio il numero di istanze nell’ASG (aumentandolo di 1 ad esempio) usando terraform ( che mantiene lo stato ed esegue l’incremento) la nuova istanza esegue il “Kubeadm join” in user_data , quindi attiva il Daemonset di rete Weave ed a tutti gli effetti in cluster in rete con tutti gli altri nodi. Quindi Terraform (pur con qualche problema a mantenere lo stato a fronte di alcuni destroy) , in questo caso continua a mantenere lo stato -quindi continua ad essere documento di riferimento del cluster e allo stesso tempo è strumento di ampliamento (in termini di deployment di macchine fisiche) del cluster kubernetes (&lt;strong&gt;Questa caratteristica è unica tra le modalità di installazione di kubernetes al di fuori di Google GCA , sia per features di Kubeadm sia per feature di terraform&lt;/strong&gt;)&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Vediamo ora il come viene effettuato il deployment AWS in terrraform ed il provisioning tramite user_data.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;cm&quot;&gt;/*
+test  kubeadm
+*/&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;provider&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;access_key&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.access_key}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;secret_key&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.secret_key}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;region&lt;/span&gt;     &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.region}&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Key&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;pair&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;the&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;instances&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_key_pair&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ssh-key&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;key_name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;k8s&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;public_key&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.k8s-ssh-key}&quot;&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;lifecycle&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;create_before_destroy&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_vpc&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;main&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;cidr_block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;10.0.0.0/16&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;enable_dns_hostnames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;
+
+    &lt;span class=&quot;nx&quot;&gt;tags&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;TF_Kube&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_internet_gateway&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;gw&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;vpc_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_vpc.main.id}&quot;&lt;/span&gt;
+
+    &lt;span class=&quot;nx&quot;&gt;tags&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;TF_Kube&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_route_table&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;r&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;vpc_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_vpc.main.id}&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;route&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;cidr_block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;0.0.0.0/0&quot;&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;gateway_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_internet_gateway.gw.id}&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+    &lt;span class=&quot;nx&quot;&gt;depends_on&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;aws_internet_gateway.gw&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+    &lt;span class=&quot;nx&quot;&gt;tags&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;TF_Kube&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_route_table_association&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;publicA&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;subnet_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_subnet.publicA.id}&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;route_table_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_route_table.r.id}&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_route_table_association&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;publicB&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;subnet_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_subnet.publicB.id}&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;route_table_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_route_table.r.id}&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_subnet&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;publicA&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;vpc_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_vpc.main.id}&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;cidr_block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;10.0.100.0/24&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;availability_zone&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;eu-west-1a&quot;&lt;/span&gt;
+  
+
+    &lt;span class=&quot;nx&quot;&gt;tags&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;TF_kube&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_subnet&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;publicB&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;vpc_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_vpc.main.id}&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;cidr_block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;10.0.101.0/24&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;availability_zone&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;eu-west-1b&quot;&lt;/span&gt;
+  
+
+    &lt;span class=&quot;nx&quot;&gt;tags&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;TF_kube&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_security_group&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;kubernetes&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;kubernetes&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;description&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Allow inbound ssh traffic&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;vpc_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_vpc.main.id}&quot;&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;ingress&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;from_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;22&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;to_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;22&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;protocol&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;tcp&quot;&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;cidr_blocks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;0.0.0.0/0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;ingress&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;from_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;to_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;protocol&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-1&quot;&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;cidr_blocks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;10.0.100.0/24&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;ingress&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;from_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;to_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;protocol&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-1&quot;&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;cidr_blocks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;10.0.101.0/24&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;egress&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;from_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;to_port&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;protocol&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-1&quot;&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;cidr_blocks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;0.0.0.0/0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;tags&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;kubernetes&quot;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;template_file&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;master-userdata&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;template&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${file(&quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;master&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;userdata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;)}&quot;&lt;/span&gt;
+
+    &lt;span class=&quot;nx&quot;&gt;vars&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;k8stoken&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.k8stoken}&quot;&lt;/span&gt;   			&lt;span class=&quot;cm&quot;&gt;/* var d'ambiente per quando viene eseguita in init la user_data i.e. var rendered*/&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;template_file&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;worker-userdata&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;template&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${file(&quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;worker&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;userdata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;)}&quot;&lt;/span&gt;
+
+    &lt;span class=&quot;nx&quot;&gt;vars&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;k8stoken&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.k8stoken}&quot;&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;masterIP&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_instance.k8s-master.private_ip}&quot;&lt;/span&gt; &lt;span class=&quot;cm&quot;&gt;/* var d'ambiente per quando viene eseguita in init la user_data*/&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_instance&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;k8s-master&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;ami&lt;/span&gt;           &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ami-0d77397e&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;instance_type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;t2.micro&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;subnet_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_subnet.publicA.id}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;user_data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${data.template_file.master-userdata.rendered}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;key_name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_key_pair.ssh-key.key_name}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;associate_public_ip_address&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;                  &lt;span class=&quot;cm&quot;&gt;/*  only to test*/&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;vpc_security_group_ids&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;${aws_security_group.kubernetes.id}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+   &lt;span class=&quot;nx&quot;&gt;depends_on&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;aws_internet_gateway.gw&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;tags&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;[TF] k8s-master&quot;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+
+
+&lt;span class=&quot;cm&quot;&gt;/*resource &quot;aws_elb&quot; &quot;web-elb&quot; {
+  name = &quot;my-load-balancer&quot;
+   COMMENTATO : l'ELB lo CREAMO A MANO*/&lt;/span&gt;
+&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;  &lt;span class=&quot;nx&quot;&gt;The&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;same&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;availability&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;zone&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;our&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;instances&lt;/span&gt;
+   &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;availability_zones&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;${split(&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;, var.availability_zones)}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;cm&quot;&gt;/*security_groups = [&quot;${aws_security_group.kubernetes.id}&quot;]
+    subnets = [&quot;${aws_subnet.publicA.id}&quot;,&quot;${aws_subnet.publicB.id}&quot;]
+
+   listener {
+     instance_port     = 31409          in effetti l'elb si potrebbe creare a priori e
+     instance_protocol = &quot;http&quot;         quando crei il servizio inponi di usare la porta
+     lb_port           = 80             che hai usato qui -- a questo punto gestisci tu il 
+					range di porte NodePort
+     lb_protocol       = &quot;http&quot;
+   }
+ 
+   health_check {
+     healthy_threshold   = 2
+     unhealthy_threshold = 2
+     timeout             = 3
+     target              = &quot;HTTP:31409/&quot;
+    interval            = 30
+  }
+
+
+} COMMENTATO : l'ELB lo CREAMO A MANO*/&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_autoscaling_group&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;web-asg&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;  &lt;span class=&quot;nx&quot;&gt;availability_zones&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;${split(&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;, var.availability_zones)}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;name&lt;/span&gt;                 &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;terraform-example-asg&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;max_size&lt;/span&gt;             &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.asg_max}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;min_size&lt;/span&gt;             &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.asg_min}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;health_check_grace_period&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;300&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;health_check_type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;EC2&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;desired_capacity&lt;/span&gt;     &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${var.asg_desired}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;force_delete&lt;/span&gt;         &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;launch_configuration&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_launch_configuration.web-lc.name}&quot;&lt;/span&gt;
+&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;   &lt;span class=&quot;nx&quot;&gt;load_balancers&lt;/span&gt;       &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;${aws_elb.web-elb.name}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;vpc_zone_identifier&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;${aws_subnet.publicA.id}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;${aws_subnet.publicB.id}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;depends_on&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;aws_internet_gateway.gw&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;tag&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;                 &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Name&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;value&lt;/span&gt;               &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;web-asg&quot;&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;propagate_at_launch&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;true&quot;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aws_launch_configuration&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;web-lc&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;name&lt;/span&gt;          &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;terraform-example-lc&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;image_id&lt;/span&gt;      &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ami-0d77397e&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;instance_type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;t2.micro&quot;&lt;/span&gt;
+  &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Security&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;group&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;security_groups&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;${aws_security_group.kubernetes.id}&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;user_data&lt;/span&gt;       &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${data.template_file.worker-userdata.rendered}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;key_name&lt;/span&gt;        &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${aws_key_pair.ssh-key.key_name}&quot;&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;lifecycle&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;create_before_destroy&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Vediamo ora come sono i file che vengono eseguiti durante l’init delle VM Master (template_file.master-userdata) e le VM worker lanciate dall’ASG (template_file.worker-userdata) rispettivamente.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;cp&quot;&gt;#!/bin/bash -v
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;curl&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;https&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;cat&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;EOF&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;/etc/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;apt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;list&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;kubernetes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;list&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;deb&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;http&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//apt.kubernetes.io/ kubernetes-xenial main
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;EOF&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;apt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;update&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;apt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;install&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubelet&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubeadm&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubectl&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubernetes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;cni&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;curl&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sSL&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;https&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//get.docker.com/ | sh
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;systemctl&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;docker&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;kubeadm&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;init&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;token&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;k8stoken&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;kubectl&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;apply&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;https&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//git.io/weave-kube
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;daemonset&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;weave-net&quot;&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;created&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;In questo file viene aggiornato il sistema APT  per poter scaricare l’ultima versione dei moduli kubernetes , quindi vengono installati tramite apt-get i moduli
+ kubelet kubeadm kubectl kubernetes-cni , viene installato docker engine e viene  attivato , quindi viene eseguito il comando kubeadm init con token passato tramite la variabile di terraform . Si noti che in questo momento nessun processo kubernetes (siamo in fase di boot del VM) è attivo ..Kubeadm (tra le altre cose) crea dei manifest file (/etc/kubernetes/manifests sul master) che descrivono le risorse per creare i pod di “sistema” relativi alle altre risorse (controller, api-server..).Questi file vengono letti da kubectl al suo boot ( fatto tramite systemd e quindi da lui monitorato e d eventualmente ristartato) e vengono creati (come pod) tutti i componenti di kubernetes. Quindi kubectl può lanciare (tramite le Api dell’API-server che a questo punto è attivo e “connesso” in TLS -ricordate il Token?- a kubectl) il deamonset di rete Weave.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;cp&quot;&gt;#!/bin/bash -v
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;curl&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;https&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;cat&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;EOF&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;/etc/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;apt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;list&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;kubernetes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;list&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;deb&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;http&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//apt.kubernetes.io/ kubernetes-xenial main
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;EOF&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;apt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;update&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;apt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;install&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubelet&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubeadm&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubectl&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubernetes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;cni&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;curl&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sSL&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;https&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//get.docker.com/ | sh
+&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;systemctl&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;docker&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;..&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;50&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;kubeadm&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;join&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;token&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;k8stoken&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;masterIP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sleep&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;done&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Con questo file (eseguito  sui nodi Worker) vengono installate le solite componenti di kubernetes (kubectl sui nodi non serve ma comunque..) e viene lanciato il comando kubeadm -join..&lt;/p&gt;
+
+&lt;p&gt;Dunque ora abbiamo il cluster funzionante e possiamo iniziare a creare deployments e servizi correlati. Eseguiamo i seguenti comandi :&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$ &lt;/span&gt;kubectl run my-nginx --image&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;nginx --replicas&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;3 --port&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;80
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Con questo comando abbiamo creato un deployment (astrazione di livello superiore del pod , contenente ad esempio il numer di replica dei pod ) contenente un solo container (contenente un’immagine di Nginx)&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$ &lt;/span&gt;kubectl expose deployment my-nginx --port&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;80 --type&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;NodePort
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Con questo comando “espongo” la porta 80 del pod su una porta dell’Host (all’interno di un range tra 30000-32767) ma equivale anche a creare  un “service” my-nginx.&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$ &lt;/span&gt;kubectl describe service 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Infatti avendo lanciato il comando opra ottengo questa risposta:
+Si noti il valore 30917 della proprietà NodePort.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;                   &lt;span class=&quot;nx&quot;&gt;my&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;nginx&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;Namespace&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;              &lt;span class=&quot;k&quot;&gt;default&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;Labels&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;                 &lt;span class=&quot;nx&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;my&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;nginx&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;Selector&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;               &lt;span class=&quot;nx&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;my&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;nginx&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;Type&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;                   &lt;span class=&quot;nx&quot;&gt;NodePort&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;IP&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;                     &lt;span class=&quot;mf&quot;&gt;100.67&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;89.151&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;Port&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;                   &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;unset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TCP&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;NodePort&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;               &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;unset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;30917&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TCP&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;Endpoints&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;              &lt;span class=&quot;mf&quot;&gt;10.32&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;0.2&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.38&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;0.1&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.46&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;0.1&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;Session&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Affinity&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;       &lt;span class=&quot;nx&quot;&gt;None&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Quindi abbiamo 3 pod in listen agli indirizzi indicati dalla proprietà Endpoints(in effetti sui relativi nodi sono in listen sulle porte 30917). Ora non  ci resta che create un Elb AWS che è in in listen su internet sulla porta 80 e che fà loadbalancing verso le porte 30917  con i comandi :&lt;/p&gt;
+
+&lt;p&gt;La prima volta per creare l’elb e il listener sull’elb, e registrare le istanze attive nell’ASG (i worker di  kubernetes) all’elb.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;aws&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;elb&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;create&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;my&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;listeners&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Protocol=HTTP,LoadBalancerPort=80,InstanceProtocol=HTTP,InstancePort=30917&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;subnets&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;subnet&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;ae37fff5&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;subnet&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;d847e01&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;security&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;groups&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;a6d78f0&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;aws&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;elb&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;register&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;instances&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;with&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;my&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;instances&lt;/span&gt;  &lt;span class=&quot;nx&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;ecc5edc78cb62c32&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;03&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;b5a350bf596efea&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;004&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;a082ea6b8ce783&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Le volte successive per aggiungere le porte dei servizi nuovi che hai aggiunto.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;aws&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;elb&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;create&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;listeners&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;name&lt;/span&gt;  &lt;span class=&quot;nx&quot;&gt;my&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;balancer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;listeners&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Protocol=HTTP,LoadBalancerPort=81,InstanceProtocol=HTTP,InstancePort=xxxxx&quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;et nuv’là …Les jeux sont faits&lt;/strong&gt; : esegui un http://&amp;lt;indirizzo DNS dell’elb&amp;gt; e vedrai la pagina di default di nginx.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Docker Containers and Orchestration Systems</title>
+   <link href="http://localhost:4000/cloud/2016/10/01/Containers-and-Orchestration/"/>
+   <updated>2016-10-01T00:00:00+02:00</updated>
+   <id>http://localhost:4000/proj4spes.github.io/cloud/2016/10/01/Containers-and-Orchestration</id>
+   <content type="html">&lt;div class=&quot;message&quot;&gt;
+  Hy! In questo post voglio  classificare diversi software che gestiscono/creano/usufruiscono di una tecnologia che è diventatata &quot;hot&quot; nel corso degli ultumi 2/3 anni.
+&lt;/div&gt;
+&lt;p&gt;”&lt;!-- more --&gt;”&lt;/p&gt;
+
+&lt;h2 id=&quot;cosa-sono-i-container&quot;&gt;Cosa Sono i Container&lt;/h2&gt;
+
+&lt;p&gt;La prima  cosa da chiarirsi è che cosa sono i Container,  perchè sono un argomento di fortissimo interesse nel mondo IT odierno , quali sono i loro punti di forza e quali le loro debolezze.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;I container sono degli “ambienti” che tramite l’utilizzo di alcuni  servizi runtime del sistema operativo Linux/Unix permettono alle applicazioni, configurate al loro interno di godere di un certo grado di &lt;strong&gt;isolamento&lt;/strong&gt;,  semplificando così la fase della loro messa in opera (deployment). Questa semplificazione, unitamente all’introduzione di architetture a &lt;strong&gt;microservizi&lt;/strong&gt; delle applicazioni stesse porta ad una accelerazione del ciclo di rilascio del servizio in produzione,con evidente vantaggio in termini di flessibilità e reattività del prodotto/servizio rispetto al mercato.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Volendo essere più chiari, il kernel linux/unix mette a disposizione dei file system , degli alberi dei processi , della memoria , dei device che “appaiono” all’applicazione essere quelli del sistema operativo  Host e gli permette di utilizzarli in modo esclusivo  ma in realtà le risorse sono condivise e gestite con le stesse strutture dati dello stesso kernel.&lt;/p&gt;
+
+&lt;p&gt;Quella precedente è la definizione diciamo dei puristi , in effetti un altro motivo di rilevanza dei container, soprattutto in una loro implementazione ovvero Docker, è la speranza che essi vadano ad occupare fette di mercato  (almeno una parte) delle Virtual Machine tradizionali , ovviando ad alcuni “problemi” quali uso inefficiente delle risorse disco/memoria e lentezza nella fase di boot, producendo in ultima analisi una riduzione dei costi.&lt;/p&gt;
+
+&lt;p&gt;Dalla contrapposizione dei container alle Virtual Machine, emergono  i punti di debolezza dei primi rispetto alle seconde : il livello di isolamento dal mondo esterno e quindi il livello di sicurezza introdotto (soprattutto nei confronti del mondo esterno). Infatti mentre le VM all’interno del singolo host condividevano solamente la CPU e alcuni driver in caso  di para-virtualizzazione, i container condividono l’intero sistema operativo, shared library e driver.&lt;/p&gt;
+
+&lt;p&gt;In effetti bisogna dire che le maggior debolezza dei container in termini di sicurezza si presenta nei sistemi Linux in quanto altri sistemi operativi più vicini al mondo mainframe già prevedevono forme di container native (system Z Ibm) o aggiunte  (Solais Zone) i cui in effetti esisteva una segmentazione (duplicazione) delle risorse all’interno del Kernel.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;em&gt;Quindi gli sforzi per mantenere un livello di sicurezza a livello Enterprise si muove verso 3 direttrici diverse :&lt;/em&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;eseguire i container su sistemi operativi diversi da linux (joyent Triton cloud provider operante su SmartOS riprendente concetti di Zone Solaris)&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;eseguire i workload  su  hypervisor light specializzati per container (LXD di Canonical) in questo caso i container eseguono un proprio sistema operativo al di sotto delle applicazioni (system container)&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;aumentare la sicurezza intrinseca all’interno dei container applicando i metodi quali Apparmor/SELinux o configurando oppurtunamente le capabilities dei processi all’interno dei container&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;em&gt;Ma perchè pur essendo le tecnologie che permettola realizzazione dei container presenti da decadi, solamente ora si è osservato un grande interesse ?&lt;/em&gt;&lt;/strong&gt; Perchè  finora tutte le implementazioni non prevedevano un controller ed un set di tool che facilita notevolmente (enormemente) la messa in opera di un container. Basti pensare che il prodotto più diffuso OpenVZ (e forse anche il più simile a docker) presenta un set di Template da applicare/modificare a secondo dei tipi dei workload previsti. In effetti la grande innovazione di docker è la presenza del controller (processo docker spazio user dell’Host) che permette l’attivazione del container a partire da immagini (di tipo docker) precostituite e presenti su repository pubblici. 
+In effetti il valore di Docker è  soprattutto nei registry pubblici dove ormai sono  presenti migliaia di immagini di applicazioni diverse costruite in modo incrementale da Template (immagini certificate ..) tanto che altre soluzioni di container mantengono lo stesso formato o lo ampliano (vedi RKT di Coreos) ma mantenendo comunque la compatibilità.&lt;/p&gt;
+
+&lt;p&gt;Vediamo ora come i container Docker vengono gestiti e che ecosistema di tool, management software, scheduler, hanno generato anche indirettamente , ovvero presso i possibili competitors..&lt;/p&gt;
+
+&lt;p&gt;Diciamo subito che gli attori che hanno abbracciato il credo Docker appartengona a svariate categorie che vanno dalle Startup (prima tra tutte quelle che si occupano di infrastrutture  per il Clou ovviamente), ai grandi Cloud Provider nella declinazione Iaas, Paas a Saas, ai grandi vendor di OS e ambienti virtualizzati, ai fornitori di servizi applicativi .. e tanti “piccoli” sviluppatori che usano Docker per semplificare il loro lavoro.&lt;/p&gt;
+
+&lt;p&gt;Quindi alcuni tool (o architetture ) saranno più adatti, ad esempio, al mondo degli sviluppatori mentre altri saranno interessanti per gli amministratori di DataCenter ad esempio.&lt;/p&gt;
+
+&lt;p&gt;Poviamo ad elencarli per categorie funzionali ovvero in base alle esigenze a cui rispondono.&lt;/p&gt;
+
+&lt;h2 id=&quot;dove-viene-eseguito-docker-&quot;&gt;Dove viene eseguito Docker ?&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;su bare metal ovvero pc di casa … nienta da dire   Build,Ship and Run e divertitevi&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;su bare metal all’interno di container “nativi” (vedi sopracitato Joyent) : procuratevi il Docker patchato dal fornitore del container esterno ( docker non prevede di operare con namespce confinati , i cgroup device (virtual) non possono essere su AUFS , il processo deve avere accesso privilegiato ad alcune strutture linux..)&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;su virtual machine : in questo caso le accortezze sono di scegliere OS guest leggeri(in ram) e veloci a “salire” e  che comunque supportino docker. L’estremizzazione di ciò è rapppresentata dalla tecnologia (sperimentale a livello di prodotto generale) degli unikernel.  A tal proposito và detto che Docker Inc. ha acquisito all’inizio dell’anno una delle società più prometttenti in questo settore (Unikernel Systems) e grazie a questa acquisizione ha rilasciato in Beta (privata) “Docker per Windows” e Docker per OSX, infatti in queste soluzioni Docker opera in VM speciali il cui OS guest è un Unikernel (nota: l’hypervisor per OSX è un performante Open Source che opera in UserSpace . Un’altro approccio meno spinto  ma più prodotto può essere considerato il Photon  OS di VMware (viene offerta un’ immagine linux minimale ma con un set di librerie ottimizzate a gestire Virtual Hardware ESXi) . Photon Os è naturalmnte integrato in vSphere.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;più genericamente in Cloud : se intendete usare docker(standalone)  nel vostro public Cloud di riferimento ed intendete integrarlo con altre funzionalità tiptiche del cloud (ad esempio integrandolo con un autoscaler ivi presente) e quindi non operando solo a livello Paas, è importante notare che tutti i maggiori attoti AWS, GCE, Azure ..) non presentano tool di “configurazione” compatibili con  Compose Docker. Quindi il progetto inteso come package dovrà tener conto di diversi file di “configurazione” per il deployment in produzione presso il Cloud .&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;come-viene-generato-un-singolo-container-di-tipo-docker-quali-sono-le-sue-caratteristiche&quot;&gt;Come viene generato un singolo container di tipo Docker? Quali sono le sue caratteristiche?&lt;/h2&gt;
+
+&lt;p&gt;Volendo semplificare un container di tipo Docker è un processo che esegue delle chiamate ai servizi di Kernel cgroups (per ottenere un certo grado di separazione e limiti  sull’utilizzo delle risorse dell’Host quali cpu, memoria ,  device ..per ogni processo/gruppo di processi)  e namespaces ( per ottenere  l’univocità dei nomi delle risorse all’interno dei container); quindi monta un file system root  contenente tutto quello che serve all’applicazione (di tipo Copy on write o a cipolla per essere più chiari) e delle librerie per fornire i servizi di netwoking ed accesso ai volumi ed infine lancia l’applicazione desiderata.
+Tutto questo viene effettuato secondo quanto scritto in un manifesto (metadati del container) associato all’immagine del container.
+Quindi l’immagine così definita viene gestita nel su ciclo di vita da un deamon che a sua volta espone un’API utilizzata o da una CLI(command Line) o da remote agent (in effetti l’architettura è leggermente più complicata, cfr rel docker 1.12 Docker). Questo daemon è in effetti ciò che differenzia i container tipo docker dai container tipo LXC, Zones,Jail, ed in misura minore da OpenVZ ed LXD ed effetivmente è quello che ha decretatato il successo dei container di tipo Docker.
+Perchè  continuo a citare “container di tipo Docker” ? Perchè in effetti ad oggi esistono 2 formati per le immagini ( e relativi daemon) per creare/gestire i container :  appc  e docker legacy (di gia?!) .
+Il primo è stato implementato nel sistema RKT da CoreOs, in contrapposiziona al formato Docker iniziale (anzi definendo per la prima volta un formato delle immagini che voleva essere standard).
+RKT ovviamente è in grado di eseguire &lt;strong&gt;automaticamente&lt;/strong&gt; anche le migliaia di immagini Docker , oltre a quelle definite tramite lo standard “Appc Container Image” (ACI); Docker dal canto suo converte le immagini Aci in immagini Docker con un  tool  offline Aci2docker.
+Stando così le cose si profilava un profonda spccatura all’interno dell’ecosistema docker :Google, RedHat , VMWare, Apcera-Ericsson, Mirantis  aderivano ad Appc non solo per motivi “politici” (effettivamente Appc permette di implementare diversi di tipi di servizi Container ed un maggior grado di sicurezza )
+2 Notizie : una buona ed una meno -&amp;gt; a giugno 2015 viene definito dall’Open container Initiative  uno Image-specification che raccoglie i contributi sia di docker e (soprattutto) di Coreos e con la release 1.11 docker rilascia un modulo &lt;em&gt;runC&lt;/em&gt; in grado convertire i formati docker in formato OCI (Open Container Image)  e di lanciarli e gestirli. 
+La cattiva notizia è che  nella componente di runtime dello standard il networking previsto e sviluppato da docker non è compatibile con gli sviluppi di altri ( google e kubernetes in primis)&lt;/p&gt;
+
+&lt;h2 id=&quot;come-viene-automaticamente-configurato-un-host-per-eseguire-docker&quot;&gt;Come viene automaticamente configurato un Host per eseguire Docker?&lt;/h2&gt;
+&lt;p&gt;Il tool di riferimento fornito da Docker è &lt;strong&gt;Docker Machine&lt;/strong&gt; che è un tool che fornendo driver (canali di comunicazione ) verso i pricipali Cloud provider (AWS,GCE,..) o verso i principali ambienti virtuali (hyper-Vm virtualbox…) crea un Docker Host (ovvero installa un Docker Deamon/engine) e poi invia commandi di tipo Docker client e quindi crea/lancia..docker container sugli host remoti/locali
+Altri strumenti utilizzabili per raggiungere gli stessi risultati possono essere sia Ansible o Terraform di HashiCorporation ; avendo entrambi le funzionalità di provioning di Host tramite driver e di configurazione degli stessi.&lt;/p&gt;
+
+&lt;h2 id=&quot;come-viene-allocato-un-container-docker-allinterno-di-un-cluster-di-host-&quot;&gt;Come viene allocato un container Docker all’interno di un cluster di Host ?&lt;/h2&gt;
+&lt;p&gt;Questa funzione è svolta dalla categoria dei sistemi chiamati  Container scheduler ed è  dove vengono realizzate le funzioni di allocazione dinamica,  di service recovery,  di scale-out, di service discovery, di load balancing sui servizi , di connessione ai servizi di networking e di volume management ; è ovvio quindi che l’attenzione del mondo del Cloud si concentri su queste architetture . ed è anche la categorie dove più si differenziano a mio parere,  i sistemi in funzione dei loro reali utenti finali.
+Moltissimi sono i sistemi che possono rientrare in questa categoria , alcuni in esercizio da anni (scheduler di VM  come BOSH di Cloud Foundry) , altri appena nati ma già con interessati caratteristiche.. 
+Io ne citerò solo quelli di maggior risonanza e più specificamente rivolti ai Docker Container. Primo ad essere nominato non può essere che docker Swarm : il  cluster è gestito da almeno 3 Master che sissinconizzano tramite un Consensus protocol interno o basato su RAFT di Consul HasshiCopr, sui nodi del cluster è presente il docker deamon/engine e sia le cli sia il tool di deployment dei Services (docker compose ) sono quello standard di Docker. Il Cluster è relativamente facile da attivare, il networking centralizzato su server Key-Value  interno (per service networking e service discover interno) o  basato su Consul altrettanto semplice.&lt;/p&gt;
+
+&lt;p&gt;Il secondo Scheduler per risonanza è senz’altro &lt;strong&gt;Kubernets&lt;/strong&gt; . In questo caso il cluster è più complicato da attivare perchè esistono processi specifici per specifiche funzionalitè o ruoli , caratteristiche del sistema che lo differenziano definitivamente del Docker Swarm (oltre ad un numero di funzionaità superiori)  sono: l’unitàminima di allocazione sono  i Pod (insiemi  di container  che condividono lo stessso network spacename (condividono lo stesso indirizzo  IP) , le label e i selettori che permettono di gestire in siemi di Pod in modo uniforme , 
+il servisio di Networking è distribuito su ogni nodo del Cluster così come il servizio di dns resolver per i servizii, i container potranno essere di 2 tipi  : Docker (runC ad oggi) e RKT (appc) , una prima definizione di Pod statefull (Petset) anche se con limitazioni.&lt;/p&gt;
+
+&lt;p&gt;Se finora i sistemi descritti possono esere gestiti da una singola persona o da un piccolo team  i seguenti sistemi sono rivolti a grandi provider  per gestire cluster di grandi dimensioni. Tra essi possiamo elencare Mesos/Marathon e CoreOS. Mentre il primo è un sistema di scheduling (non solo per container) per framework (ovvero applicazioni distribuite) che insistono sullo stesso cluster ; ad esempio Marathon è il framework che alloca i container o in generale i workload eterogenei  mentre Chronos è una sorta di Cron operante su cluster mentre il secondo (CoreOs è un insieme di sistemi/tool loosed coupled che interagiscono per fornire un servizio di cluster management (operativo sul Cloud Tectonic).&lt;/p&gt;
+
+&lt;p&gt;Da ultimo vorrei menzionare il sistema &lt;strong&gt;&lt;em&gt;Nomad-Consul-Vault&lt;/em&gt;&lt;/strong&gt; della HashiCorp. Il primo sistema  è uno scheduler molto veloce e facile da installare . Il second sistema (Consul ) è un sistema Key-value distribuito con protocollo RAFT integrato e servizi di Health-checking associato al service discoovery implentabile. Il terzo (Vault) è un sistma per la conservazione ei segreti  Il terzo (Vault) è un sistma per la conservazione dei segreti. I 3 sottosistemi sono ovviamente integrati molto bene  e offrono insieme funzioni tipiche di una piattaforma evoluta pur essendo questi prodotti molto “giovani”. Bisogna dire Nomad non è solamente  uno scheduler di Container (al pari di Mesos) e quindi di interesse per gli eventuali integratori di rete  ibride. Unitamente al fatto che esiste un’altro prodotto &lt;strong&gt;&lt;em&gt;“Terraform”&lt;/em&gt;&lt;/strong&gt; di Hashicorp che è un sistema per deployment in fisico (Openstack ) e in cloud (molto buona l’integrazione con AWS ad esempio ) direi che HashiCorp è una società da tenere d’occhio.&lt;/p&gt;
+
+&lt;h2 id=&quot;come-faccio-a-manteneregestire-dei-dati-in-modo-persistente-allinterno-di-un-container-&quot;&gt;Come faccio a mantenere/gestire dei dati in modo persistente all’interno di un Container ?&lt;/h2&gt;
+
+&lt;p&gt;Volendo semplificare (semplificare molto) ci sono solo 3 modi :&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Bypasso il file file system UFS  e scrivo su disco locale  (volume driver) o monto una directory da Host&lt;/li&gt;
+  &lt;li&gt;Mi connetto ad un container che si comporta come al punto 1&lt;/li&gt;
+  &lt;li&gt;Utilizzo un cluster di storage/volume che fornisce un servizio (astraendo l’implementazione magari) di accesso ad un pool distribuito di volume/storage&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Docker implementa 1 e 2 nativamente ed i 3 tramite plugins, Kubernet tutte e 3 le modalità e quando vado ad elencare i cluster supportati  sembra di leggere la documentazione di Openstack (livello di integrazione tipico delle IaaS)…. Allo stesso tempo kubernetes inizia ad introdurre concetti di Volume Claim ( richiesta di  volume che nasconde le specifiche implementative -servizio tipico delle PaaS) . Tra tutti i tipi di cluster supportati da Kubernetes (Ceph, glusterFS , Nfs …) ve ne è uno che si differenzia da gli altri :flocker. Quest’ultimo associa il volume (chiamato DataSet ) tipicamente al singolo container al momento della run  e nomina univocamente il container; quindi quando spostiamo (distruggiamo e ricreiamo il conatainer ) su un nuovo host riasssocia automaticamente il volume (che si può appoggiare su storage provider anche di tipo cloud :ebs di aws..) alla nuova istanza di container.. .  E’ quello che fa anche l’implementazione dei PetSet di kubernetes (funzione rilasciata in alpha)…e stiamo iniziando  a parlare di FullState container o FullState application a micro-servizi .. ma questa è un’altra  storia…&lt;/p&gt;
+
+&lt;h2 id=&quot;network-for-container&quot;&gt;Network for Container&lt;/h2&gt;
+&lt;p&gt;Affrontare in modo esaustivo tutte le caratteristiche dei vari sistemi per connettere i container distribuiti su più nodi o VM ( presso i vari Cloud provider) non l’obiettivo di questo blog .
+Possiamo iniziare a classificare i sistemi di Networking per Cnatainer secondo :&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;la loro architettura di rete per connettere Conatainer su  Host diversi&lt;/li&gt;
+  &lt;li&gt;la presenza di un storage cluster esterno per mantenere la configurazione e le route&lt;/li&gt;
+  &lt;li&gt;I protocolli supportati&lt;/li&gt;
+  &lt;li&gt;la presenza di DNS interno&lt;/li&gt;
+  &lt;li&gt;l’integrazione con le IP tables&lt;/li&gt;
+  &lt;li&gt;l’integrazione con soluzione di tipo SDN&lt;/li&gt;
+  &lt;li&gt;la modalità di integrazione come plugins o add-on nelle varie piattaforme di clustering&lt;/li&gt;
+  &lt;li&gt;la possibilità di cryptare i flussi&lt;/li&gt;
+  &lt;li&gt;etc. etc.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Diciamo comunque a parte Docker che ha sviluppato una sua soluzione “Docker Overlay Network” i oltre apoter usare altri plugins di tipo network , le altre soluzione (kubernetes , Mesos..) utilizzano essenzialmente i servizi di rete sviluppati terze parti.  Tra le più conosciute citiamo :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;&lt;em&gt;Flannel&lt;/em&gt;&lt;/strong&gt; fornisce un’Overlay network (Vxlan o UDP) che opera a livello 2 (MAC) , non presenta un DNS e si appggia ad un storage esterno   etcd&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;&lt;em&gt;Weave&lt;/em&gt;&lt;/strong&gt; fornisce un’Overlay network (Vxlan o UDP) che opera a livello 2 (MAC) , presenta un DNS interno e non si appggia ad un storage esterno ma implementa un protocollo di tipo “Rumors” con cui scambia le route tra tutti gli agenti. Presenta enrcryption (non TLS) . Particolarità : si integra con Kubernetes secondo lo standard (scelto da Kubernetes per i Plugin ) CNI non supportato da Docker. Gli agenti sui nodi effettuano anche la funzione di transito permettendo così topologia sia di tipo mesh ma anche “Partially connected”&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;&lt;em&gt;Calico&lt;/em&gt;&lt;/strong&gt; realizza una rete a livello 3 BGP&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Infine bisogna dire che tutti i sopraccitati sistemi sono comunque in grado di sfrutttare i backend di rete dei principali Cloud Provider (AWS e GCE) al fine di sfruttare le funzioni agiuntive che quest’ultimi offrono come ELB .&lt;/p&gt;
+
+&lt;h2 id=&quot;operating-system-docker-based&quot;&gt;Operating System Docker Based&lt;/h2&gt;
+&lt;p&gt;Tra le caratteristiche che hanno portato alla ribalta i container (di tipo Docker) sono la facilità di installazione , la struttura a cipolla (ovvero il deployment incrementale) ed l’atomcità del singolo container, ovvero il container è auto-contenente : si può concellare o aggiungere con un singolo comando , ma non si può cambiarne il contenuto (ovvero l’immagine). Queste caratteristiche in effetti sono interessanti anche per sistemi quali i packet manager ed in generale anche per la gestione dei sistemi operativi intesi come aggregati di pacchetti applicativi da gestire (update, upgrade, roll-back, controlli su dipendenze …). In questa direzione si sono mossi Atomic (di RedHat ) e RancherOs . Quest’ultimo per esempio ha portato a l’estremo il concetto di Sistema Operativo a container , infatti RancherOs prevede il kernel linux ma sopra questo opera direttamente un processo Docker (detto System Docker) invece di processi quali init/systemd. Questo processo Docker crea alcuni container di sistema che forniscono servizi di sistema quali dhcp, udev, console, rsyslog e logind ed un container che ospita al suo interno un’istanza di Docker engine. Sopra quest’ultimo docker container (grazie a) vengono creati e gestiti tutti container di tipo applicativo (user level container).
+Questo approccio,  anche se può sembrare eccessivo, ha portato ad avere un OS leggero, facilmente gestibile e con una fase di boot molto veloce ; ovviamente a discapito della tipologia dei workload ospitati (no IPC e principalmente Stateless). Bisogna anche dire che questo modello di deployment (autoreferenziale) è sempre più diffuso nelle applicazioni nel mondo dei container : ad esempio ultimamente è stata rilasciata in alpha una “procedura” (un comando in CLI) per semplificare l’attivazione di un cluster Kubernetes . Tale procedura prevede l’installazione (come processi linux con il package manager di riferimento dell’host) solamente di docker.io (engine di docker) , di  kubelet (engine di kubernetes) e del commando kubeadm su ogni nodo del cluster. Ogni altro componente del sistema (Api server , clusterControllerManager , etcd,  , kubeproxy , kube-discovery, network,  cAdvisor…) vengono lanciati come container (in Pod - di tipo Deamonset) e vengono preconfigurati con Manifest file come le applicazioni…&lt;/p&gt;
+
+&lt;h2 id=&quot;casi-di-utilizzo-dei-container-e-dele-relative-piattaforme&quot;&gt;Casi di utilizzo dei Container e dele relative piattaforme&lt;/h2&gt;
+
+&lt;p&gt;Come detto all’inizio del Blog i container di tipo Docker hano un immediato successo presso gli sviluppatori Web , perchè facilitava loro le fasi testing e deployment ed infatti Docker ed il suo standard di container sono ormai lo standard DEFACTO per soluzioni tipo “Web multi tier application” o “Web services”. Altro utilizzo di Docker Stand-alone sono i servizi tipo Container On Demand o OnTime schedule o On Event Container (come AWS Lamda)
+ Altra cosa  è invece implementare HyperGrid o Hadoop,Spark cluster as Service ; in questo caso una piattaforma tipo Mesos è senz’altro più indicata sia per il controllo alivello di scheduling  che per la scalabilità offerti.
+Kubernetes invece sia per i servizi realizzati e correntemente proposti, oltre a quelli promessi, ed anche per i suoi sponsor (Google, RedHat..) ed effettivamente per il modo strutturato di offrire servizinei container/pod (opinionated dicono gli anglosassoni) si presta ad essere considerato come la piattaforma per sistemi di livello superiorei (intesi ontop che aggiungono valore di tipo applicativo) come le Paas (Openshift, Deis) o le MBaaS (Mobile Backend as a Service) o più generalmente parlando  per tutte le applicazioni complesse basate a Micro-servizi.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Introducing Lanyon</title>
+   <link href="http://localhost:4000/static%20web/2014/01/02/introducing-lanyon/"/>
+   <updated>2014-01-02T00:00:00+01:00</updated>
+   <id>http://localhost:4000/proj4spes.github.io/static%20web/2014/01/02/introducing-lanyon</id>
+   <content type="html">&lt;p&gt;Lanyon is an unassuming &lt;a href=&quot;http://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt; theme that places content first by tucking away navigation in a hidden drawer. It’s based on &lt;a href=&quot;http://getpoole.com&quot;&gt;Poole&lt;/a&gt;, the Jekyll butler.
+“&lt;!-- more --&gt;”&lt;/p&gt;
 &lt;h3 id=&quot;built-on-poole&quot;&gt;Built on Poole&lt;/h3&gt;
 
 &lt;p&gt;Poole is the Jekyll Butler, serving as an upstanding and effective foundation for Jekyll themes by &lt;a href=&quot;https://twitter.com/mdo&quot;&gt;@mdo&lt;/a&gt;. Poole, and every theme built on it (like Lanyon here) includes the following:&lt;/p&gt;
@@ -58,145 +609,12 @@
  </entry>
  
  <entry>
-   <title>Example content</title>
-   <link href="http://github.com/proj4spes/2014/01/01/example-content/"/>
-   <updated>2014-01-01T00:00:00+01:00</updated>
-   <id>http://github.com/proj4spes/home/enri/lanyon/2014/01/01/example-content</id>
-   <content type="html">&lt;div class=&quot;message&quot;&gt;
-  Howdy! This is an example blog post that shows several types of HTML content supported in this theme.
-&lt;/div&gt;
-
-&lt;p&gt;Cum sociis natoque penatibus et magnis &lt;a href=&quot;#&quot;&gt;dis parturient montes&lt;/a&gt;, nascetur ridiculus mus. &lt;em&gt;Aenean eu leo quam.&lt;/em&gt; Pellentesque ornare sem lacinia quam venenatis vestibulum. Sed posuere consectetur est at lobortis. Cras mattis consectetur purus sit amet fermentum.&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;Curabitur blandit tempus porttitor. Nullam quis risus eget urna mollis ornare vel eu leo. Nullam id dolor id nibh ultricies vehicula ut id elit.&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;Etiam porta &lt;strong&gt;sem malesuada magna&lt;/strong&gt; mollis euismod. Cras mattis consectetur purus sit amet fermentum. Aenean lacinia bibendum nulla sed consectetur.&lt;/p&gt;
-
-&lt;h2 id=&quot;inline-html-elements&quot;&gt;Inline HTML elements&lt;/h2&gt;
-
-&lt;p&gt;HTML defines a long list of available inline tags, a complete list of which can be found on the &lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/HTML/Element&quot;&gt;Mozilla Developer Network&lt;/a&gt;.&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;strong&gt;To bold text&lt;/strong&gt;, use &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;strong&amp;gt;&lt;/code&gt;.&lt;/li&gt;
-  &lt;li&gt;&lt;em&gt;To italicize text&lt;/em&gt;, use &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;em&amp;gt;&lt;/code&gt;.&lt;/li&gt;
-  &lt;li&gt;Abbreviations, like &lt;abbr title=&quot;HyperText Markup Langage&quot;&gt;HTML&lt;/abbr&gt; should use &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;abbr&amp;gt;&lt;/code&gt;, with an optional &lt;code class=&quot;highlighter-rouge&quot;&gt;title&lt;/code&gt; attribute for the full phrase.&lt;/li&gt;
-  &lt;li&gt;Citations, like &lt;cite&gt;— Mark otto&lt;/cite&gt;, should use &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;cite&amp;gt;&lt;/code&gt;.&lt;/li&gt;
-  &lt;li&gt;&lt;del&gt;Deleted&lt;/del&gt; text should use &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;del&amp;gt;&lt;/code&gt; and &lt;ins&gt;inserted&lt;/ins&gt; text should use &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;ins&amp;gt;&lt;/code&gt;.&lt;/li&gt;
-  &lt;li&gt;Superscript &lt;sup&gt;text&lt;/sup&gt; uses &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;sup&amp;gt;&lt;/code&gt; and subscript &lt;sub&gt;text&lt;/sub&gt; uses &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;sub&amp;gt;&lt;/code&gt;.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Most of these elements are styled by browsers with few modifications on our part.&lt;/p&gt;
-
-&lt;h2 id=&quot;heading&quot;&gt;Heading&lt;/h2&gt;
-
-&lt;p&gt;Vivamus sagittis lacus vel augue rutrum faucibus dolor auctor. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit. Morbi leo risus, porta ac consectetur ac, vestibulum at eros.&lt;/p&gt;
-
-&lt;h3 id=&quot;code&quot;&gt;Code&lt;/h3&gt;
-
-&lt;p&gt;Cum sociis natoque penatibus et magnis dis &lt;code class=&quot;highlighter-rouge&quot;&gt;code element&lt;/code&gt; montes, nascetur ridiculus mus.&lt;/p&gt;
-
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;c1&quot;&gt;// Example can be run directly in your JavaScript console
-&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;// Create a function that takes two arguments and returns the sum of those arguments
-&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;adder&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;Function&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;a&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;b&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;return a + b&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;// Call the function
-&lt;/span&gt;
-&lt;span class=&quot;nx&quot;&gt;adder&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// &amp;gt; 8&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
-
-&lt;p&gt;Aenean lacinia bibendum nulla sed consectetur. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa.&lt;/p&gt;
-
-&lt;h3 id=&quot;lists&quot;&gt;Lists&lt;/h3&gt;
-
-&lt;p&gt;Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Aenean lacinia bibendum nulla sed consectetur. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Praesent commodo cursus magna, vel scelerisque nisl consectetur et.&lt;/li&gt;
-  &lt;li&gt;Donec id elit non mi porta gravida at eget metus.&lt;/li&gt;
-  &lt;li&gt;Nulla vitae elit libero, a pharetra augue.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Donec ullamcorper nulla non metus auctor fringilla. Nulla vitae elit libero, a pharetra augue.&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;Vestibulum id ligula porta felis euismod semper.&lt;/li&gt;
-  &lt;li&gt;Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.&lt;/li&gt;
-  &lt;li&gt;Maecenas sed diam eget risus varius blandit sit amet non magna.&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;Cras mattis consectetur purus sit amet fermentum. Sed posuere consectetur est at lobortis.&lt;/p&gt;
-
-&lt;dl&gt;
-  &lt;dt&gt;HyperText Markup Language (HTML)&lt;/dt&gt;
-  &lt;dd&gt;The language used to describe and define the content of a Web page&lt;/dd&gt;
-
-  &lt;dt&gt;Cascading Style Sheets (CSS)&lt;/dt&gt;
-  &lt;dd&gt;Used to describe the appearance of Web content&lt;/dd&gt;
-
-  &lt;dt&gt;JavaScript (JS)&lt;/dt&gt;
-  &lt;dd&gt;The programming language used to build advanced Web sites and applications&lt;/dd&gt;
-&lt;/dl&gt;
-
-&lt;p&gt;Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Nullam quis risus eget urna mollis ornare vel eu leo.&lt;/p&gt;
-
-&lt;h3 id=&quot;tables&quot;&gt;Tables&lt;/h3&gt;
-
-&lt;p&gt;Aenean lacinia bibendum nulla sed consectetur. Lorem ipsum dolor sit amet, consectetur adipiscing elit.&lt;/p&gt;
-
-&lt;table&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th&gt;Name&lt;/th&gt;
-      &lt;th&gt;Upvotes&lt;/th&gt;
-      &lt;th&gt;Downvotes&lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tfoot&gt;
-    &lt;tr&gt;
-      &lt;td&gt;Totals&lt;/td&gt;
-      &lt;td&gt;21&lt;/td&gt;
-      &lt;td&gt;23&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tfoot&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td&gt;Alice&lt;/td&gt;
-      &lt;td&gt;10&lt;/td&gt;
-      &lt;td&gt;11&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;Bob&lt;/td&gt;
-      &lt;td&gt;4&lt;/td&gt;
-      &lt;td&gt;3&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;Charlie&lt;/td&gt;
-      &lt;td&gt;7&lt;/td&gt;
-      &lt;td&gt;9&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;p&gt;Nullam id dolor id nibh ultricies vehicula ut id elit. Sed posuere consectetur est at lobortis. Nullam quis risus eget urna mollis ornare vel eu leo.&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;Want to see something else added? &lt;a href=&quot;https://github.com/poole/poole/issues/new&quot;&gt;Open an issue.&lt;/a&gt;&lt;/p&gt;
-</content>
- </entry>
- 
- <entry>
    <title>What's Jekyll?</title>
-   <link href="http://github.com/proj4spes/2013/12/31/whats-jekyll/"/>
+   <link href="http://localhost:4000/static%20web/2013/12/31/whats-jekyll/"/>
    <updated>2013-12-31T00:00:00+01:00</updated>
-   <id>http://github.com/proj4spes/home/enri/lanyon/2013/12/31/whats-jekyll</id>
-   <content type="html">&lt;p&gt;&lt;a href=&quot;http://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt; is a static site generator, an open-source tool for creating simple yet powerful websites of all shapes and sizes. From &lt;a href=&quot;https://github.com/mojombo/jekyll/blob/master/README.markdown&quot;&gt;the project’s readme&lt;/a&gt;:&lt;/p&gt;
-
+   <id>http://localhost:4000/proj4spes.github.io/static%20web/2013/12/31/whats-jekyll</id>
+   <content type="html">&lt;p&gt;&lt;a href=&quot;http://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt; is a static site generator, an open-source tool for creating simple yet powerful websites of all shapes and sizes. From &lt;a href=&quot;https://github.com/mojombo/jekyll/blob/master/README.markdown&quot;&gt;the project’s readme&lt;/a&gt;:
+“&lt;!-- more --&gt;”&lt;/p&gt;
 &lt;blockquote&gt;
   &lt;p&gt;Jekyll is a simple, blog aware, static site generator. It takes a template directory […] and spits out a complete, static website suitable for serving with Apache or your favorite web server. This is also the engine behind GitHub Pages, which you can use to host your project’s page or blog right here from GitHub.&lt;/p&gt;
 &lt;/blockquote&gt;
