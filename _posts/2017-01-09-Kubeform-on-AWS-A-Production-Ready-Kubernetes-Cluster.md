@@ -1,11 +1,8 @@
 ---
 author: proietti
 comments:
-date: 2017-01-30 09:00:00+00:00
+title: Kubeform on AWS - A production Ready Kubernetes Cluster 
 layout: post
-slug: a-introduction-to-coreos
-title: An introduction to CoreOS
-wordpress_id:
 categories: Cloud
 tags:
 - Docker
