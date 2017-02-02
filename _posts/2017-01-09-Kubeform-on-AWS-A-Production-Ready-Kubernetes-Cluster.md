@@ -1,5 +1,22 @@
+---
+author: proietti
+comments:
+date: 2017-01-30 09:00:00+00:00
+layout: post
+slug: a-introduction-to-coreos
+title: An introduction to CoreOS
+wordpress_id:
+categories: Cloud
+tags:
+- Docker
+- Linux
+- CoreOS
+---
+<div class="message">
 
 With this document I want  to present a tool for provisioning an "almost  production ready"  <a href="https://kubernetes.io">Kubernetes</a> clusters to any cloud with security, scalability and maintainability in mind. The "Kubeform"    <a href="https://github.com/Capgemini/kubeform">Kubeform</a> tool has been outsourced by Cap Gemini Cloud Group and recently I forked it to  study it.
+</div>
+"<!-- more -->"
 
 <p>As of today, Kubeform comes with support for <a href="https://aws.amazon.com/">AWS</a>, <a href="https://www.digitalocean.com/">DigitalOcean</a> and local clusters via <a href="https://www.docker.com/products/docker-compose">Docker Compose</a> but in this document I focused on AWS support part and I 've been upgraded the public cloud solution (i.e. managed by an external client)  to  Terraform 0.7 release. 
 
