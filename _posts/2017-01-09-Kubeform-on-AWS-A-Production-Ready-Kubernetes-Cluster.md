@@ -33,4 +33,4 @@ With this document I want  to present a tool for provisioning an "almost  produc
 
 <p>As previously said the Cluster is "almost ready for production" due to the Worker mangement whiich does not neither allow them to scale using the terraform features (TO BE VERIFIED) nor to  belong to an AWS Autoscaling Group.<p>
 
-<p> Also the ingress controller is not in HA TBV<p>
+<p> Also the ingress controller is not in HA (TBV)<p>
