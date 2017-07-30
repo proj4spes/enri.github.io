@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Kubernetes : Integrations on AWS
+title: Kubernetes Integrations on AWS
 tags:
 - Kubernetes
 - DevOps
