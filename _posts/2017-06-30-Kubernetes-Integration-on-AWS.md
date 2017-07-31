@@ -12,12 +12,8 @@ categories:
 
 <div class="message">
 My first 5 month of Kubernetes.  
-
 In this period  I 've been interested in installing and configuring Kubernetes cluster using different tools and architecture.
-
 At the same time , of course , I 've looked around on Github to find the most complete and updated open source implementation .
-
-
 These are my considerations on what is happening on the stage and what are the most trending way to install Kubernetes on AWS.
 </div>
 "<!-- more -->"
