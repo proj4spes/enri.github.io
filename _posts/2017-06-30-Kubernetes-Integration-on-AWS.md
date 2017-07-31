@@ -1,4 +1,5 @@
 ---
+date: 2017-06-30 09:00:00+00:00
 layout: post
 title: Kubernetes Integrations on AWS
 tags:
@@ -9,7 +10,7 @@ categories:
 ---
 
 
-
+<div class="message">
 My first 5 month of Kubernetes.  
 
 In this period  I 've been interested in installing and configuring Kubernetes cluster using different tools and architecture.
